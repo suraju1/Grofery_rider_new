@@ -76,16 +76,23 @@ class TermsPrivacyPage extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
-                Icons.hourglass_empty,
+                Icons.info_outline,
                 size: 64.sp,
-                color: AppColors.primaryColor,
+                color: AppColors.primaryColor.withOpacity(0.5),
               ),
               SizedBox(height: 16.h),
               CustomText(
-                text: 'Loading content...',
+                text: 'No content available',
                 fontSize: 18.sp,
                 fontWeight: FontWeight.w600,
-                color: Theme.of(context).colorScheme.onSurface,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+              ),
+              SizedBox(height: 8.h),
+              TextButton(
+                onPressed: () {
+                  context.read<SystemSettingsBloc>().add(FetchDeliveryBoySettings());
+                },
+                child: const Text('Tap to Refresh'),
               ),
             ],
           ),

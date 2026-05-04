@@ -1030,6 +1030,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get totalDistance => 'Total Distance';
 
   @override
+  String get deliveryTimeSlot => 'Delivery Time Slot';
+
+  @override
   String get orderId => 'Order ID';
 
   @override

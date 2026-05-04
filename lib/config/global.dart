@@ -70,7 +70,7 @@ class Global {
     final box = await _userBox;
     await box.put(_fcmTokenKey, token);
     _cachedFcmToken = token;
-    debugPrint('🔔 FCM TOKEN SAVED TO HIVE: $token');
+    debugPrint('🔔 FCM TOKEN SAVED TO HIVE');
   }
 
   static Future<String?> getFCMToken() async {
@@ -83,7 +83,7 @@ class Global {
     _cachedFcmToken = token;
 
     if (token != null) {
-      log('TOKEN :::: $token');
+      log('TOKEN :::: [HIDDEN]');
     } else {}
 
     return token;
@@ -92,7 +92,7 @@ class Global {
   static Future<void> printFCMToken() async {
     final token = await getFCMToken();
     if (token != null) {
-      log('TOKEN :::::::::: $token');
+      log('TOKEN :::::::::: [HIDDEN]');
     } else {}
   }
 

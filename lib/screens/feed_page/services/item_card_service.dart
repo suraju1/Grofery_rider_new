@@ -10,7 +10,8 @@ class ItemCardService {
     required BuildContext context,
     required Items item,
     required bool from,
-    required String? currentProcessingItemId,
+    required Set<String> processingItemIds,
+    required bool isCollectingAll,
     required Orders? fetchedOrder,
     required VoidCallback onCollect,
     required VoidCallback onDelivered,
@@ -28,7 +29,7 @@ class ItemCardService {
         final bool isDelivered = item.status?.toLowerCase() == 'delivered';
 
         final bool requiresOtp = item.product?.requiresOtp == 1;
-        final bool isLoading = currentProcessingItemId == item.id.toString();
+        final bool isLoading = isCollectingAll || processingItemIds.contains(item.id.toString());
 
         return Padding(
           padding: const EdgeInsets.only(bottom: 8.0),

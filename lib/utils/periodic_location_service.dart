@@ -100,10 +100,20 @@ class PeriodicLocationService {
 
   Future<void> _updateLocationPeriodically() async {
     try {
-      final locationData = await _location.getLocation();
-      await _updateLocationOnServer(locationData);
+      // Basic check
+      final isServiceEnabled = await _location.serviceEnabled();
+      if (!isServiceEnabled) return;
+
+      final locationData = await _location.getLocation().timeout(
+        const Duration(seconds: 10),
+      );
+
+      if (locationData.latitude != null && locationData.longitude != null) {
+        await _updateLocationOnServer(locationData);
+      }
     } catch (e) {
-      //
+      // Silently fail for periodic updates to avoid spamming the user
+      print('⚠️ Periodic Location update failed: $e');
     }
   }
 

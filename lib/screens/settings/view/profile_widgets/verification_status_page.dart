@@ -750,35 +750,44 @@ class _VerificationStatusPageState extends State<VerificationStatusPage> {
                             ),
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(12.r),
-                              child: Image.network(
-                                url,
-                                fit: BoxFit.cover,
-                                loadingBuilder: (
-                                  context,
-                                  child,
-                                  loadingProgress,
-                                ) {
-                                  if (loadingProgress == null) return child;
-                                  return Container(
-                                    color: Colors.grey.withValues(alpha: 0.2),
-                                    child: const Center(
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
+                              child: url.isNotEmpty
+                                ? Image.network(
+                                  url,
+                                  fit: BoxFit.cover,
+                                  loadingBuilder: (
+                                    context,
+                                    child,
+                                    loadingProgress,
+                                  ) {
+                                    if (loadingProgress == null) return child;
+                                    return Container(
+                                      color: Colors.grey.withValues(alpha: 0.2),
+                                      child: const Center(
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                        ),
                                       ),
-                                    ),
-                                  );
-                                },
-                                errorBuilder: (context, error, stackTrace) {
-                                  return Container(
-                                    color: Colors.grey.withValues(alpha: 0.2),
-                                    child: Icon(
-                                      Icons.broken_image,
-                                      color: Colors.grey,
-                                      size: 32.sp,
-                                    ),
-                                  );
-                                },
-                              ),
+                                    );
+                                  },
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Container(
+                                      color: Colors.grey.withValues(alpha: 0.2),
+                                      child: Icon(
+                                        Icons.broken_image,
+                                        color: Colors.grey,
+                                        size: 32.sp,
+                                      ),
+                                    );
+                                  },
+                                )
+                                : Container(
+                                  color: Colors.grey.withValues(alpha: 0.2),
+                                  child: Icon(
+                                    Icons.broken_image,
+                                    color: Colors.grey,
+                                    size: 32.sp,
+                                  ),
+                                ),
                             ),
                           ),
                         ),

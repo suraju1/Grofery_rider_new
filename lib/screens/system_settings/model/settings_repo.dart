@@ -50,22 +50,29 @@ class SettingsModel {
         final systemData = json['data'] as Map<String, dynamic>;
         
         // Check if this Map contains currency information
-        if (systemData.containsKey('currency') || systemData.containsKey('currencySymbol')) {
+        if (systemData.containsKey('currency') || systemData.containsKey('currencySymbol') || systemData.containsKey('currency_symbol')) {
           // Create a system SettingItem
           final systemItem = SettingItem(
             variable: 'system',
             value: Value.fromJson(systemData),
           );
           data!.add(systemItem);
-
-
-
         } else {
           // If no currency info, try to parse as regular SettingItem
+          // Also check if this map *is* the settings (like terms/privacy)
           final settingItem = SettingItem.fromJson(systemData);
           if (settingItem.variable != null) {
             data!.add(settingItem);
-
+          } else if (systemData.containsKey('termsCondition') || 
+                     systemData.containsKey('terms_condition') ||
+                     systemData.containsKey('privacyPolicy') ||
+                     systemData.containsKey('privacy_policy')) {
+            // It looks like this map is the delivery boy settings itself
+            final deliveryItem = SettingItem(
+              variable: 'delivery_boy',
+              value: Value.fromJson(systemData),
+            );
+            data!.add(deliveryItem);
           }
         }
       }
@@ -279,17 +286,17 @@ class Value {
     referEarnMinimumOrderAmount = json['referEarnMinimumOrderAmount'];
     referEarnNumberOfTimesBonus = json['referEarnNumberOfTimesBonus'];
     currency = json['currency'];
-    currencySymbol = json['currencySymbol'];
+    currencySymbol = json['currencySymbol'] ?? json['currency_symbol'];
     
     // Debug logging for currency
-    if (json['currency'] != null || json['currencySymbol'] != null) {
+    if (json['currency'] != null || json['currencySymbol'] != null || json['currency_symbol'] != null) {
 
 
 
     }
-    returnRefundPolicy = json['returnRefundPolicy'];
-    privacyPolicy = json['privacyPolicy'];
-    termsCondition = json['termsCondition'];
+    returnRefundPolicy = json['returnRefundPolicy'] ?? json['return_refund_policy'];
+    privacyPolicy = json['privacyPolicy'] ?? json['privacy_policy'];
+    termsCondition = json['termsCondition'] ?? json['terms_condition'];
     
     // Debug logging for web system_settings
     if (json['returnRefundPolicy'] != null || json['privacyPolicy'] != null) {

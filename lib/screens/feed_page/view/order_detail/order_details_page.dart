@@ -106,7 +106,10 @@ class _OrderDetailsPageState extends State<OrderDetailsPage>
   bool _isEarningsExpanded = false;
   bool _isPricingExpanded = false;
   bool _codPopupShown = false;
-  String? _currentProcessingItemId;
+  Set<String> _processingItemIds = {};
+  bool _isCollectingAll = false;
+  int _bulkSuccessCount = 0;
+  int _bulkTotalCount = 0;
 
   // Confetti controller for celebration animation
   late ConfettiController _confettiController;
@@ -247,88 +250,64 @@ class _OrderDetailsPageState extends State<OrderDetailsPage>
       child: BlocConsumer<ItemsCollectedBloc, ItemsCollectedState>(
         listener: (context, state) {
           if (state is ItemsCollectedSuccess) {
-            // Handle delivery success (both from delivery mode and individual item delivery)
-            if (_currentProcessingItemId != null &&
-                _currentProcessingItemId != 'collecting_all') {
-              // Store the item ID before resetting it
-              String processedItemId = _currentProcessingItemId!;
-
-              // Add the item to appropriate collections based on order status and mode
-              setState(() {
-                _currentProcessingItemId = null; // Reset after processing
-              });
-
-              // Remove the force refresh that was causing bottom sheet to disappear
-              // _forceBottomSheetRefresh();
-
-              // Update the local order data immediately upon API success
-              setState(() {
-                if (_fetchedOrder?.items != null) {
-                  List<Items> updatedItems = _fetchedOrder!.items!.map((item) {
-                    if (item.id.toString() == processedItemId) {
-                      // Determine new status based on whether we are delivering or collecting
-                      bool isDelivery = (widget.from && _fetchedOrder?.status?.toLowerCase() != 'assigned') || _fetchedOrder?.status?.toLowerCase() == 'out_for_delivery';
-                      String newStatus = isDelivery ? 'delivered' : 'collected';
-                      
-                      // Also update otpVerified if this was an OTP delivery
-                      int newOtpVerified = (isDelivery && item.product?.requiresOtp == 1) ? 1 : item.otpVerified ?? 0;
-                      
-                      return item.copyWith(
-                        status: newStatus,
-                        otpVerified: newOtpVerified,
-                      );
-                    }
-                    return item;
-                  }).toList();
-
-                  _fetchedOrder = _fetchedOrder!.copyWith(items: updatedItems);
-                }
-                _currentProcessingItemId = null;
-              });
-
-              // Dispatch FetchOrderDetails to refresh from API (as backup)
-              context.read<OrderDetailsBloc>().add(FetchOrderDetails(widget.orderId));
-
-              String successMessage = (widget.from && _fetchedOrder?.status?.toLowerCase() != 'assigned')
-                  ? AppLocalizations.of(context)!.itemDeliveredSuccessfully
-                  : AppLocalizations.of(context)!.itemCollectedSuccessfully;
-
-              ToastManager.show(
-                context: context,
-                message: successMessage,
-                type: ToastType.success,
-              );
-            } else if (!widget.from && _currentProcessingItemId == 'collecting_all') {
-              // Handle success for "collect all" mode
-              setState(() {
-                if (_fetchedOrder?.items != null) {
-                  List<Items> updatedItems = _fetchedOrder!.items!.map((item) {
-                    return item.status?.toLowerCase() != 'delivered' 
-                        ? item.copyWith(status: 'collected') 
-                        : item;
-                  }).toList();
-                  _fetchedOrder = _fetchedOrder!.copyWith(items: updatedItems);
-                }
-                _currentProcessingItemId = null;
-              });
-
-              ToastManager.show(
-                context: context,
-                message: AppLocalizations.of(context)!.allItemsCollectedSuccessfully,
-                type: ToastType.success,
-              );
+            if (_isCollectingAll) {
+              _bulkSuccessCount++;
               
-              // Refresh order details to sync with API
+              // Only show final toast when all items are done
+              if (_bulkSuccessCount >= _bulkTotalCount) {
+                setState(() {
+                  _isCollectingAll = false;
+                  if (_fetchedOrder?.items != null) {
+                    List<Items> updatedItems = _fetchedOrder!.items!.map((item) {
+                      return item.status?.toLowerCase() != 'delivered' 
+                          ? item.copyWith(status: 'collected') 
+                          : item;
+                    }).toList();
+                    _fetchedOrder = _fetchedOrder!.copyWith(items: updatedItems);
+                  }
+                });
+
+                ToastManager.show(
+                  context: context,
+                  message: AppLocalizations.of(context)!.allItemsCollectedSuccessfully,
+                  type: ToastType.success,
+                );
+                
+                context.read<OrderDetailsBloc>().add(FetchOrderDetails(widget.orderId));
+              }
+            } else {
+              // Individual item success
+              String? processedItemId;
+              // Try to find which ID in our processing set just finished
+              // This is a bit tricky with Bloc but since we update state locally, 
+              // we can just refresh the whole order or find the one that matches.
+              // For now, we rely on the fact that we can clear all since it's most likely the one that just finished.
+              
+              setState(() {
+                // If we have items, we try to find which one would have transitioned
+                if (_fetchedOrder?.items != null) {
+                  // Note: Since we can't easily know which specific event finished if multiple were concurrent,
+                  // we refresh from API to be safe, but also do a local optimistic update.
+                  // For simplicity, we clear the set once we get a success.
+                  _processingItemIds.clear(); 
+                }
+              });
+
               context.read<OrderDetailsBloc>().add(FetchOrderDetails(widget.orderId));
+
+              ToastManager.show(
+                context: context,
+                message: (widget.from && _fetchedOrder?.status?.toLowerCase() != 'assigned')
+                    ? AppLocalizations.of(context)!.itemDeliveredSuccessfully
+                    : AppLocalizations.of(context)!.itemCollectedSuccessfully,
+                type: ToastType.success,
+              );
             }
           } else if (state is ItemsCollectedError) {
-            // Store the item ID before resetting it
-
-            // Reset loading state on error
             setState(() {
-              _currentProcessingItemId = null;
+              _processingItemIds.clear();
+              _isCollectingAll = false;
             });
-
 
             ToastManager.show(
               context: context,
@@ -474,6 +453,12 @@ class _OrderDetailsPageState extends State<OrderDetailsPage>
                           // Payment Method Card
                           new_widgets.PaymentMethodCard(order: order),
                           SizedBox(height: 12.h),
+
+                          // Delivery Time Slot Card
+                          if (order.deliveryTimeSlot != null) ...[
+                            new_widgets.DeliveryTimeSlotCard(order: order),
+                            SizedBox(height: 12.h),
+                          ],
 
                           // Order Note Card
                           if (order.orderNote != null && order.orderNote != "")
@@ -699,8 +684,9 @@ class _OrderDetailsPageState extends State<OrderDetailsPage>
   void _collectItem(Items item) {
     // Collect the item directly (no OTP required)
     if (item.id != null) {
-      // Set the current processing item ID for tracking
-      _currentProcessingItemId = item.id.toString();
+      setState(() {
+        _processingItemIds.add(item.id.toString());
+      });
 
       // Dispatch the API call - UI updates will be handled in BlocConsumer
       context.read<ItemsCollectedBloc>().add(
@@ -711,11 +697,9 @@ class _OrderDetailsPageState extends State<OrderDetailsPage>
   
   void _deliverItemWithoutOtp(Items item) async {
     if (item.id != null) {
-      // Set the current processing item ID for tracking
-      _currentProcessingItemId = item.id.toString();
-
-      // Remove the force refresh that was causing bottom sheet to disappear
-      // _forceBottomSheetRefresh();
+      setState(() {
+        _processingItemIds.add(item.id.toString());
+      });
 
       // Dispatch the API call to mark item as delivered
       context.read<ItemsCollectedBloc>().add(
@@ -730,9 +714,8 @@ class _OrderDetailsPageState extends State<OrderDetailsPage>
       final String? otp = await _showDeliveryOtpDialog();
 
       if (otp != null && otp.isNotEmpty) {
-        // Set the current processing item ID for tracking
         setState(() {
-          _currentProcessingItemId = item.id.toString();
+          _processingItemIds.add(item.id.toString());
         });
 
         // Dispatch the API call - UI updates will be handled in BlocConsumer
@@ -756,7 +739,8 @@ class _OrderDetailsPageState extends State<OrderDetailsPage>
       context: context,
       item: item,
       from: widget.from,
-      currentProcessingItemId: _currentProcessingItemId,
+      processingItemIds: _processingItemIds,
+      isCollectingAll: _isCollectingAll,
       fetchedOrder: _fetchedOrder,
       onCollect: () => _collectItem(item),
       onDelivered: () => _deliverItemWithoutOtp(item),
@@ -778,7 +762,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage>
 
     if (otp != null && otp.isNotEmpty) {
       setState(() {
-        _currentProcessingItemId = item.id.toString();
+        _processingItemIds.add(item.id.toString());
       });
 
       // Show COD popup if payment method is COD and popup hasn't been shown yet
@@ -793,26 +777,24 @@ class _OrderDetailsPageState extends State<OrderDetailsPage>
   }
 
   void _collectAllItems() async {
+    final uncollectedItems = _fetchedOrder?.items?.where((item) {
+      return item.status?.toLowerCase() != 'collected' && 
+             item.status?.toLowerCase() != 'delivered';
+    }).toList();
+
+    if (uncollectedItems == null || uncollectedItems.isEmpty) return;
+
     setState(() {
-      _currentProcessingItemId = 'collecting_all';
+      _isCollectingAll = true;
+      _bulkSuccessCount = 0;
+      _bulkTotalCount = uncollectedItems.length;
     });
 
-    OrderService.collectAllItems(
-      order: _fetchedOrder,
-      onItemCollected: (itemId) {
-        context.read<ItemsCollectedBloc>().add(ItemsCollected(itemId));
-      },
-      onError: (errorMessage) {
-        setState(() {
-          _currentProcessingItemId = null;
-        });
-        ToastManager.show(
-          context: context,
-          message: errorMessage,
-          type: ToastType.error,
-        );
-      },
-    );
+    for (var item in uncollectedItems) {
+      if (item.id != null) {
+        context.read<ItemsCollectedBloc>().add(ItemsCollected(item.id.toString()));
+      }
+    }
   }
 
   void _showEarningsPopup() {

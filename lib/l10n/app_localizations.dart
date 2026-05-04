@@ -2038,6 +2038,12 @@ abstract class AppLocalizations {
   /// **'Total Distance'**
   String get totalDistance;
 
+  /// No description provided for @deliveryTimeSlot.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery Time Slot'**
+  String get deliveryTimeSlot;
+
   /// No description provided for @orderId.
   ///
   /// In en, this message translates to:

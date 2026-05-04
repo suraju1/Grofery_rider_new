@@ -1045,6 +1045,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get totalDistance => 'Distance totale';
 
   @override
+  String get deliveryTimeSlot => 'Delivery Time Slot';
+
+  @override
   String get orderId => 'ID de commande';
 
   @override

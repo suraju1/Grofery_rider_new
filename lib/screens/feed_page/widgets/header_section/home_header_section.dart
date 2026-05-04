@@ -221,7 +221,8 @@ class HomeHeaderSection extends StatelessWidget {
                                   child: CircleAvatar(
                                     radius: 18.r,
                                     backgroundColor: AppColors.primaryColor,
-                                    child: profileImageUrl.startsWith('http')
+                                    child: profileImageUrl.startsWith('http') &&
+                                            profileImageUrl.isNotEmpty
                                         ? ClipOval(
                                           child: Image.network(
                                             profileImageUrl,
@@ -241,8 +242,9 @@ class HomeHeaderSection extends StatelessWidget {
                                             },
                                           ),
                                         )
-                                        : profileImageUrl ==
-                                                "assets/png/profile.jpg"
+                                        : (profileImageUrl ==
+                                                    "assets/png/profile.jpg" ||
+                                                profileImageUrl.isEmpty)
                                         ? Icon(
                                           Icons.person,
                                           size: 18.sp,
@@ -253,6 +255,13 @@ class HomeHeaderSection extends StatelessWidget {
                                           width: 36.r,
                                           height: 36.r,
                                           fit: BoxFit.cover,
+                                          errorBuilder: (context, error, stackTrace) {
+                                            return Icon(
+                                              Icons.person,
+                                              size: 18.sp,
+                                              color: Colors.white,
+                                            );
+                                          },
                                         ),
                                   ),
                                 ),

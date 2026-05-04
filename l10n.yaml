@@ -4,5 +4,6 @@ output-localization-file: app_localizations.dart
 output-class: AppLocalizations
 preferred-supported-locales: [en, hi, fr, ar, te, gu]
 use-deferred-loading: false
+untranslated-messages-file: untranslated_report.txt
 flutter:
   generate: true 

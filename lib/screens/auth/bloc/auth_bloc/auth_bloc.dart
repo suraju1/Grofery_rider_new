@@ -25,6 +25,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         final token = response['data']['access_token'].toString();
 
         await Global.setUserToken(token);
+        print('TOKEN : $token');
 
         emit(AuthSuccess(message: response['message']));
       } else {
@@ -41,9 +42,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(AuthLoading());
     try {
-      
-
-
       // Map<String, dynamic> response = {};
       final response = await AuthRepository().register(
         name: event.name,
@@ -65,6 +63,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         final token = response['access_token'].toString();
 
         await Global.setUserToken(token);
+        print('TOKEN : $token');
 
         emit(AuthSuccess(message: response['message']));
       } else {

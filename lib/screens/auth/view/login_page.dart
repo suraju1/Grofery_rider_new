@@ -6,7 +6,6 @@ import 'package:go_router/go_router.dart';
 import 'package:grofery_rider/config/app_images.dart';
 import 'package:grofery_rider/router/app_routes.dart';
 import 'package:grofery_rider/l10n/app_localizations.dart';
-import 'package:grofery_rider/screens/system_settings/bloc/system_settings_bloc.dart';
 import '../../../config/colors.dart';
 import '../../../utils/widgets/toast_message.dart';
 import '../../../utils/widgets/custom_textfield.dart';
@@ -31,11 +30,6 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   void initState() {
-    // TODO: implement initState
-    if(context.read<SystemSettingsBloc>().isDemo){
-      _emailController.text = 'rider@gmail.com';
-      _passwordController.text = '12345678';
-    }
     super.initState();
   }
 

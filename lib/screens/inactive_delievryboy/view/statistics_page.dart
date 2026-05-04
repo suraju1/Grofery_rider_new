@@ -215,9 +215,20 @@ class _StatisticsPageState extends State<StatisticsPage> {
                 CircleAvatar(
                   radius: 45,
                   backgroundColor: AppColors.errorColor.withValues(alpha: 0.1),
-                  backgroundImage: NetworkImage(
-                    profileData?.deliveryBoy.profileImage ?? "",
-                  ),
+                  backgroundImage:
+                      (profileData?.deliveryBoy.profileImage != null &&
+                              profileData!.deliveryBoy.profileImage!.isNotEmpty)
+                          ? NetworkImage(profileData.deliveryBoy.profileImage!)
+                          : null,
+                  child:
+                      (profileData?.deliveryBoy.profileImage == null ||
+                              profileData!.deliveryBoy.profileImage!.isEmpty)
+                          ? Icon(
+                            Icons.person,
+                            size: 45.r,
+                            color: AppColors.primaryColor,
+                          )
+                          : null,
                 ),
                 // Status indicator dot
                 Positioned(

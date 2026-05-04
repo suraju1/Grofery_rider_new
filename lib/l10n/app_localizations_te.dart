@@ -1036,6 +1036,9 @@ class AppLocalizationsTe extends AppLocalizations {
   String get totalDistance => 'మొత్తం దూరం';
 
   @override
+  String get deliveryTimeSlot => 'Delivery Time Slot';
+
+  @override
   String get orderId => 'ఆర్డర్ ఐడి';
 
   @override

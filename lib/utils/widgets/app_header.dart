@@ -202,7 +202,8 @@ class _AppHeaderState extends State<AppHeader> {
                       radius: 18.r,
                       backgroundColor: AppColors.primaryColor,
                       child:
-                          profileImageUrl.startsWith('http')
+                          profileImageUrl.startsWith('http') &&
+                                  profileImageUrl.isNotEmpty
                               ? ClipOval(
                                 child: Image.network(
                                   profileImageUrl,
@@ -218,7 +219,8 @@ class _AppHeaderState extends State<AppHeader> {
                                   },
                                 ),
                               )
-                              : profileImageUrl == "assets/png/profile.jpg"
+                              : (profileImageUrl == "assets/png/profile.jpg" ||
+                                      profileImageUrl.isEmpty)
                               ? Icon(
                                 Icons.person,
                                 size: 18.sp,
@@ -229,6 +231,13 @@ class _AppHeaderState extends State<AppHeader> {
                                 width: 36.r,
                                 height: 36.r,
                                 fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Icon(
+                                    Icons.person,
+                                    size: 18.sp,
+                                    color: Colors.white,
+                                  );
+                                },
                               ),
                     );
                   },

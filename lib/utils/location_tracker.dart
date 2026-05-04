@@ -246,17 +246,51 @@ class LocationTracker {
 // Background service callback
 @pragma('vm:entry-point')
 void onStart(ServiceInstance service) async {
+  // Ensure the engine is initialized in this isolate
+  try {
+    // WidgetsFlutterBinding.ensureInitialized() is sometimes needed for plugin channels
+    // but in background isolates we usually use this sparingly.
+    // However, giving it a tiny moment to settle helps with NPEs.
+    await Future.delayed(const Duration(milliseconds: 500));
+  } catch (e) {}
+
   // Initialize location tracking in background
   final location = Location();
   final locationRepo = UpdateCurrentLocationRepo();
   LocationData? lastLocation;
 
   // Configure location for background
-  await location.changeSettings(
-    accuracy: LocationAccuracy.high,
-    interval: 30000, // 30 seconds
-    distanceFilter: 10.0, // 10 meters
-  );
+  try {
+    // Check if service is enabled before changing settings
+    bool serviceEnabled = await location.serviceEnabled();
+    if (!serviceEnabled) {
+      serviceEnabled = await location.requestService();
+    }
+
+    if (serviceEnabled) {
+      PermissionStatus permission = await location.hasPermission();
+      if (permission == PermissionStatus.granted ||
+          permission == PermissionStatus.grantedLimited) {
+        // Enable background mode for the plugin
+        try {
+          await location.enableBackgroundMode(enable: true);
+        } catch (e) {
+          print('⚠️ Could not enable background mode: $e');
+        }
+
+        await location
+            .changeSettings(
+              accuracy: LocationAccuracy.high,
+              interval: 30000, // 30 seconds
+              distanceFilter: 10.0, // 10 meters
+            )
+            .timeout(const Duration(seconds: 5));
+      }
+    }
+  } catch (e) {
+    // Prevent app crash on CHANGE_SETTINGS_ERROR or NullPointerException from plugin
+    print('⚠️ Background Location Setup Error: $e');
+  }
 
   // Get initial location
   try {

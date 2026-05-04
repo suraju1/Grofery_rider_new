@@ -273,6 +273,26 @@ class _AvailableOrderCardContent extends StatelessWidget {
                                 ),
                               ],
                             ),
+                            if (order.deliveryTimeSlot != null)
+                              Padding(
+                                padding: EdgeInsets.only(top: 2.h),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.calendar_today,
+                                      size: 10.sp,
+                                      color: Colors.orange.withValues(alpha: 0.8),
+                                    ),
+                                    SizedBox(width: 4.w),
+                                    CustomText(
+                                      text: '${order.deliveryTimeSlot!.title} (${order.deliveryTimeSlot!.startTime} - ${order.deliveryTimeSlot!.endTime})',
+                                      fontSize: 10.sp,
+                                      fontWeight: FontWeight.w500,
+                                      color: Colors.orange.withValues(alpha: 0.8),
+                                    ),
+                                  ],
+                                ),
+                              ),
                           ],
                         ),
                       ),

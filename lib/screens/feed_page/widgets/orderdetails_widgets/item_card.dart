@@ -67,14 +67,22 @@ class ItemCard extends StatelessWidget {
                       width: 50.w,
                       height: 50.h,
                       decoration: BoxDecoration(
-                        image: DecorationImage(
-                          image: NetworkImage(item.product!.image!),
-                        ),
+                        image: item.product?.image != null &&
+                                item.product!.image!.isNotEmpty
+                            ? DecorationImage(
+                              image: NetworkImage(item.product!.image!),
+                              fit: BoxFit.cover,
+                              onError: (exception, stackTrace) {
+                                // Handled by the child icon eventually
+                              },
+                            )
+                            : null,
                         color: Colors.blue[100],
                         borderRadius: BorderRadius.circular(8.r),
                       ),
                       child:
-                          item.product!.image == null
+                          (item.product?.image == null ||
+                                  item.product!.image!.isEmpty)
                               ? Center(
                                 child: Icon(
                                   Icons.shopping_bag,
@@ -216,6 +224,7 @@ class ItemCard extends StatelessWidget {
                             onDelivered?.call();
                           }
                         },
+                        isLoading: isLoading,
                         backgroundColor: AppColors.primaryColor,
                         textColor: Colors.white,
                         borderRadius: 8.r,
@@ -246,6 +255,7 @@ class ItemCard extends StatelessWidget {
                             onDelivered?.call();
                           }
                         },
+                        isLoading: isLoading,
                         backgroundColor: AppColors.primaryColor,
                         textColor: Colors.white,
                         borderRadius: 8.r,
@@ -277,6 +287,7 @@ class ItemCard extends StatelessWidget {
                               onDelivered?.call();
                             }
                           },
+                          isLoading: isLoading,
                           backgroundColor: AppColors.primaryColor,
                           textColor: Colors.white,
                           borderRadius: 8.r,
@@ -332,6 +343,7 @@ class ItemCard extends StatelessWidget {
                                   onDelivered?.call();
                                 }
                               },
+                              isLoading: isLoading,
                               backgroundColor: AppColors.primaryColor,
                               textColor: Colors.white,
                               borderRadius: 8.r,
@@ -381,6 +393,7 @@ class ItemCard extends StatelessWidget {
                                     }
                                   } 
                                 : null,
+                            isLoading: isLoading,
                             backgroundColor: (item.status?.toLowerCase() == 'preparing' || item.status?.toLowerCase() == 'ready' || orderStatus?.toLowerCase() == 'assigned')
                                 ? AppColors.primaryColor
                                 : Colors.grey,

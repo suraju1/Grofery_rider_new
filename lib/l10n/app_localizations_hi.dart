@@ -1031,6 +1031,9 @@ class AppLocalizationsHi extends AppLocalizations {
   String get totalDistance => 'कुल दूरी';
 
   @override
+  String get deliveryTimeSlot => 'Delivery Time Slot';
+
+  @override
   String get orderId => 'ऑर्डर आईडी';
 
   @override

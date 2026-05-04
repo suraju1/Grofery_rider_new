@@ -433,10 +433,14 @@ class _RatingsPageState extends State<RatingsPage> {
                         ? ClipOval(
                           child: Image.network(
                             feedback.user.profileImage,
-                            width: 40.r,
-                            height: 40.r,
+                            width: 44.r,
+                            height: 44.r,
                             fit: BoxFit.cover,
-                          ),
+                            errorBuilder: (context, error, stackTrace) {
+                              return CustomText(text: feedback.user.name);
+                            },
+                          )
+                          ,
                         )
                         : CustomText(text: feedback.user.name),
               ),

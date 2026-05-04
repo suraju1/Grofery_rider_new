@@ -8,3 +8,4 @@ export 'shipping_details_section.dart';
 export 'order_items_section.dart';
 export 'order_note_card.dart';
 export 'payment_method_card.dart';
+export 'delivery_time_slot_card.dart';

@@ -87,6 +87,7 @@ class Orders {
   final Earnings? earnings;
   final List<Items>? items;
   final DeliveryZone? deliveryZone;
+  final DeliveryTimeSlot? deliveryTimeSlot;
   final int? otpVerified;
   final String? createdAt;
   final String? updatedAt;
@@ -125,6 +126,7 @@ class Orders {
     this.earnings,
     this.items,
     this.deliveryZone,
+    this.deliveryTimeSlot,
     this.otpVerified,
     this.createdAt,
     this.updatedAt,
@@ -176,6 +178,10 @@ class Orders {
           json['delivery_zone'] != null
               ? DeliveryZone.fromJson(json['delivery_zone'])
               : null,
+      deliveryTimeSlot:
+          json['delivery_time_slot'] != null
+              ? DeliveryTimeSlot.fromJson(json['delivery_time_slot'])
+              : null,
       otpVerified: json['otp_verified'],
       createdAt: json['created_at'],
       updatedAt: json['updated_at'],
@@ -216,6 +222,7 @@ class Orders {
     Earnings? earnings,
     List<Items>? items,
     DeliveryZone? deliveryZone,
+    DeliveryTimeSlot? deliveryTimeSlot,
     int? otpVerified,
     String? createdAt,
     String? updatedAt,
@@ -255,6 +262,7 @@ class Orders {
       earnings: earnings ?? this.earnings,
       items: items ?? this.items,
       deliveryZone: deliveryZone ?? this.deliveryZone,
+      deliveryTimeSlot: deliveryTimeSlot ?? this.deliveryTimeSlot,
       otpVerified: otpVerified ?? this.otpVerified,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -587,5 +595,23 @@ class DeliveryZone {
 
   factory DeliveryZone.fromJson(Map<String, dynamic> json) {
     return DeliveryZone(id: json['id'], name: json['name']);
+  }
+}
+
+class DeliveryTimeSlot {
+  final int? id;
+  final String? title;
+  final String? startTime;
+  final String? endTime;
+
+  DeliveryTimeSlot({this.id, this.title, this.startTime, this.endTime});
+
+  factory DeliveryTimeSlot.fromJson(Map<String, dynamic> json) {
+    return DeliveryTimeSlot(
+      id: json['id'],
+      title: json['title'],
+      startTime: json['start_time'],
+      endTime: json['end_time'],
+    );
   }
 }

@@ -42,6 +42,7 @@ import 'package:provider/provider.dart';
 import 'l10n/app_localizations.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'utils/notification_manager.dart';
+import 'utils/location_tracker.dart' as tracker;
 
 // Add these imports for Firebase
 import 'package:firebase_core/firebase_core.dart';
@@ -73,12 +74,14 @@ void main() async {
 
   await Hive.initFlutter();
   await Hive.openBox('theme_box');
-  await Global.initializeToken();
 
-  final localizationService = LocalizationService();
-  await localizationService.initialize();
+  // Initialize remaining services in parallel to optimize startup
+  await Future.wait([
+    Global.initializeToken(),
+    LocalizationService().initialize(),
+    initializeService(),
+  ]);
 
-  await initializeService();
   await _restartServicesIfNeeded();
 
   runApp(
@@ -96,7 +99,7 @@ Future<void> initializeService() async {
 
   await service.configure(
     androidConfiguration: AndroidConfiguration(
-      onStart: onStart,
+      onStart: tracker.onStart,
       autoStart: false,
       isForegroundMode: true,
       notificationChannelId: 'location_tracker_channel',
@@ -106,17 +109,10 @@ Future<void> initializeService() async {
     ),
     iosConfiguration: IosConfiguration(
       autoStart: false,
-      onForeground: onStart,
+      onForeground: tracker.onStart,
       onBackground: onIosBackground,
     ),
   );
-}
-
-@pragma('vm:entry-point')
-void onStart(ServiceInstance service) async {
-  service.on('stopService').listen((event) {
-    service.stopSelf();
-  });
 }
 
 @pragma('vm:entry-point')
@@ -164,16 +160,18 @@ class MyApp extends StatelessWidget {
         BlocProvider(create: (context) => PickupOrderDetailsBloc()),
         BlocProvider(create: (context) => UpdateReturnOrderStatusBloc()),
         BlocProvider(
-          create: (context) =>
-          SystemSettingsBloc(SystemSettingsRepo())
-            ..add(FetchSystemSettings()),
+          create:
+              (context) =>
+                  SystemSettingsBloc(SystemSettingsRepo())
+                    ..add(FetchSystemSettings()),
         ),
         ChangeNotifierProvider(create: (context) => LocalizationService()),
         BlocProvider(create: (context) => EarningsBloc(earningsRepo)),
         BlocProvider(
-          create: (context) =>
-          CashCollectionBloc(cashCollectionRepo)
-            ..add(FetchCashCollection()),
+          create:
+              (context) =>
+                  CashCollectionBloc(cashCollectionRepo)
+                    ..add(FetchCashCollection()),
         ),
       ],
       child: BlocBuilder<ThemeBloc, ThemeState>(

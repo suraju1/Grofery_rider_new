@@ -39,8 +39,6 @@ class ApiBaseHelper {
           ),
         );
 
-
-
   static Future<Map<String, dynamic>> loginPost({
     Map<String, dynamic>? body,
     required String url,
@@ -132,10 +130,7 @@ class ApiBaseHelper {
       final response = await _dio.post(
         url,
         data: body,
-        options: Options(
-          headers: authHeaders,
-          followRedirects: false,
-        ),
+        options: Options(headers: authHeaders, followRedirects: false),
       );
 
       if (response.statusCode != 200) {
@@ -177,7 +172,6 @@ class ApiBaseHelper {
     Function(int, int)? onReceiveProgress,
   }) async {
     try {
-
       final Map<String, String> authHeaders = await headers;
 
       final response = await _dio.post(

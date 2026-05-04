@@ -209,14 +209,10 @@ class _FeedPageContentState extends State<FeedPageContent>
         context.read<MyOrdersBloc>().add(AllMyOrdersList());
       } else if (_tabController.index == 2) {
         // Return Orders tab
-        context.read<ReturnOrderListBloc>().add(
-          FetchReturnOrders(),
-        );
+        context.read<ReturnOrderListBloc>().add(FetchReturnOrders());
       } else if (_tabController.index == 3) {
         // Pickup Orders tab
-        context.read<PickupOrderListBloc>().add(
-          FetchPickupOrders(),
-        );
+        context.read<PickupOrderListBloc>().add(FetchPickupOrders());
       }
     });
 
@@ -256,27 +252,20 @@ class _FeedPageContentState extends State<FeedPageContent>
 
   /// Refreshes data when the page becomes visible
   void _refreshDataOnPageVisible() {
-
     if (!mounted) return;
     // Refresh based on current tab
     if (_tabController.index == 0) {
       // Available Orders tab
-      context.read<AvailableOrdersBloc>().add(
-        AllAvailableOrdersList(),
-      );
+      context.read<AvailableOrdersBloc>().add(AllAvailableOrdersList());
     } else if (_tabController.index == 1) {
       // My Orders tab
       context.read<MyOrdersBloc>().add(AllMyOrdersList());
     } else if (_tabController.index == 2) {
       // Return Orders
-      context.read<ReturnOrderListBloc>().add(
-        FetchReturnOrders(),
-      );
+      context.read<ReturnOrderListBloc>().add(FetchReturnOrders());
     } else if (_tabController.index == 3) {
       // Pickup Orders
-      context.read<PickupOrderListBloc>().add(
-        FetchPickupOrders(),
-      );
+      context.read<PickupOrderListBloc>().add(FetchPickupOrders());
     }
   }
 
@@ -302,16 +291,10 @@ class _FeedPageContentState extends State<FeedPageContent>
 
       // Refresh orders after initialization
       try {
-        context.read<AvailableOrdersBloc>().add(
-          AllAvailableOrdersList(),
-        );
+        context.read<AvailableOrdersBloc>().add(AllAvailableOrdersList());
         context.read<MyOrdersBloc>().add(AllMyOrdersList());
-        context.read<ReturnOrderListBloc>().add(
-          FetchReturnOrders(),
-        );
-        context.read<PickupOrderListBloc>().add(
-          FetchPickupOrders(),
-        );
+        context.read<ReturnOrderListBloc>().add(FetchReturnOrders());
+        context.read<PickupOrderListBloc>().add(FetchPickupOrders());
       } catch (e) {
         // Handle error silently
       }

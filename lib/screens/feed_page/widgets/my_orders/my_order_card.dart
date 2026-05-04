@@ -128,6 +128,27 @@ class MyOrderCard extends StatelessWidget {
                 ],
               ),
 
+              if (order.deliveryTimeSlot != null)
+                Padding(
+                  padding: EdgeInsets.only(top: 12.h),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.calendar_today,
+                        size: 16.sp,
+                        color: Colors.orange.withValues(alpha: 0.8),
+                      ),
+                      SizedBox(width: 8.w),
+                      CustomText(
+                        text: '${order.deliveryTimeSlot!.title} (${order.deliveryTimeSlot!.startTime} - ${order.deliveryTimeSlot!.endTime})',
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.orange.withValues(alpha: 0.8),
+                      ),
+                    ],
+                  ),
+                ),
+
               SizedBox(height: 16.h),
 
               // Earnings

@@ -43,11 +43,11 @@ class _SplashScreenState extends State<SplashScreen> {
 
         // Get FCM token
         final fcmToken = await NotificationManager().getFCMToken();
-        log('📧 SPLASH SCREEN: FCM token retrieved: $fcmToken');
+        log('📧 SPLASH SCREEN: FCM token retrieved');
 
         if (fcmToken != null && fcmToken.isNotEmpty) {
           log('✅ SPLASH SCREEN: Token is valid, saving to Global...');
-          log('TOKEN :::::::::: $fcmToken');
+          log('TOKEN :::::::::: [HIDDEN]');
 
           // Save FCM token to Global for use throughout the app
           await Global.setFCMToken(fcmToken);
@@ -62,7 +62,7 @@ class _SplashScreenState extends State<SplashScreen> {
           final retryToken = await NotificationManager().getFCMToken();
           if (retryToken != null && retryToken.isNotEmpty) {
             await Global.setFCMToken(retryToken);
-            log('✅ SPLASH SCREEN: Token retrieved on retry: $retryToken');
+            log('✅ SPLASH SCREEN: Token retrieved on retry');
           }
         }
       } catch (e) {

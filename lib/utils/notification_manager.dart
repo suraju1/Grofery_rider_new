@@ -134,19 +134,19 @@ class NotificationManager {
       // For iOS, get APNS token first
       if (Platform.isIOS) {
         String? apnsToken = await _firebaseMessaging.getAPNSToken();
-        log('🍎 APNS Token: $apnsToken');
+        log('🍎 APNS Token: [HIDDEN]');
 
         if (apnsToken == null) {
           // Wait a bit and try again
           await Future.delayed(Duration(seconds: 3));
           apnsToken = await _firebaseMessaging.getAPNSToken();
-          log('🍎 APNS Token (retry): $apnsToken');
+          log('🍎 APNS Token (retry): [HIDDEN]');
         }
       }
 
       // Get FCM token
       String? token = await _firebaseMessaging.getToken();
-      log('🔑 FCM Token retrieved: $token');
+      log('🔑 FCM Token retrieved successfully');
 
       if (token != null && token.isNotEmpty) {
         // Save to SharedPreferences
@@ -159,7 +159,7 @@ class NotificationManager {
 
       // Listen for token refresh
       _firebaseMessaging.onTokenRefresh.listen((newToken) {
-        log('🔄 FCM Token refreshed: $newToken');
+        log('🔄 FCM Token refreshed');
         _saveTokenToPrefs(newToken);
       });
     } catch (e) {
@@ -174,7 +174,7 @@ class NotificationManager {
       // First try to get from SharedPreferences
       final prefs = await SharedPreferences.getInstance();
       String? cachedToken = prefs.getString('fcm_token');
-      log('📦 CACHED FCM TOKEN: $cachedToken');
+      log('📦 CACHED FCM TOKEN retrieved');
 
       if (cachedToken != null && cachedToken.isNotEmpty) {
         return cachedToken;
@@ -183,7 +183,7 @@ class NotificationManager {
       // If not in cache, get from Firebase
       log('🔥 Getting token from Firebase...');
       String? token = await _firebaseMessaging.getToken();
-      log('🔑 Firebase returned token: $token');
+      log('🔑 Firebase returned token successfully');
 
       if (token != null && token.isNotEmpty) {
         // Save to cache
@@ -204,7 +204,7 @@ class NotificationManager {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('fcm_token', token);
-      log('✅ Token saved: $token');
+      log('✅ Token saved to cache');
     } catch (e) {
       log('❌ Error saving token: $e');
     }

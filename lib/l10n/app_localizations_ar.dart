@@ -1025,6 +1025,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get totalDistance => 'المسافة الإجمالية';
 
   @override
+  String get deliveryTimeSlot => 'Delivery Time Slot';
+
+  @override
   String get orderId => 'معرف الطلب';
 
   @override

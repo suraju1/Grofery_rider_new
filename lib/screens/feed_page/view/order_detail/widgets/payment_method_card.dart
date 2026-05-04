@@ -71,7 +71,6 @@ class PaymentMethodCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return CustomCard(
       width: double.infinity,
-      height: 100.h,
 
       child: Row(
         children: [

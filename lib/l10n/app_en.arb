@@ -439,6 +439,7 @@
   "delivered": "Delivered",
   "totalEarnings": "Total Earnings",
   "totalDistance": "Total Distance",
+  "deliveryTimeSlot": "Delivery Time Slot",
   "orderId": "Order ID",
   "paymentMethod": "Payment Method",
   "completed": "Completed",

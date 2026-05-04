@@ -1034,6 +1034,9 @@ class AppLocalizationsGu extends AppLocalizations {
   String get totalDistance => 'કુલ દૂરી';
 
   @override
+  String get deliveryTimeSlot => 'Delivery Time Slot';
+
+  @override
   String get orderId => 'ઓર્ડર આઈડી';
 
   @override
