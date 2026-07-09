@@ -40,12 +40,12 @@ class AcceptOrderBloc extends Bloc<AcceptOrderEvent, AcceptOrderState> {
       if (kDebugMode) {
 
       }
-      emit(AcceptOrderError("Error: $e"));
+      emit(AcceptOrderError(e.errorMessage));
     } catch (e) {
       if (kDebugMode) {
 
       }
-      emit(AcceptOrderError("Unexpected error: $e"));
+      emit(AcceptOrderError(e.toString().replaceAll('Exception: ', '')));
     }
   }
 }

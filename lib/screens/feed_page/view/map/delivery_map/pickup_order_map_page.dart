@@ -117,6 +117,13 @@ class _PickupOrderMapPageState extends State<PickupOrderMapPage> {
   }
 
   void _setFallbackLocation() {
+    if (mounted) {
+      ToastManager.show(
+        context: context,
+        message: 'Please enable GPS and Location Permissions to track your route',
+        type: ToastType.error,
+      );
+    }
 
     setState(() {
       // Use customer location from delivery route as fallback

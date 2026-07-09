@@ -1,3 +1,4 @@
+import 'dart:developer';
 import 'package:grofery_rider/config/api_routes.dart';
 
 import '../../../config/api_base_helper.dart';
@@ -22,6 +23,9 @@ class AvailableOrdersRepo {
         useAuthToken: true,
         params: body,
       );
+      
+      log('Available orders API response: $response');
+      
       return response;
     } catch (error) {
 

@@ -10,6 +10,8 @@ import 'package:grofery_rider/utils/widgets/custom_card.dart';
 import 'package:grofery_rider/utils/widgets/custom_text.dart';
 
 
+import 'package:grofery_rider/utils/time_utils.dart';
+
 class MyOrderCard extends StatelessWidget {
   final Orders order;
   final bool isDarkTheme;
@@ -36,11 +38,31 @@ class MyOrderCard extends StatelessWidget {
               // Header with order ID and status
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  CustomText(
-                    text: 'Order #${order.id ?? 'N/A'}',
-                    fontSize: 16.sp,
-                    fontWeight: FontWeight.bold,
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      CustomText(
+                        text: 'Order #${order.id ?? 'N/A'}',
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      if (order.createdAt != null && order.createdAt!.isNotEmpty) ...[
+                        SizedBox(height: 4.h),
+                        Row(
+                          children: [
+                            Icon(Icons.access_time, size: 12.sp, color: Theme.of(context).colorScheme.onSurface.withValues(alpha:0.5)),
+                            SizedBox(width: 4.w),
+                            CustomText(
+                              text: TimeUtils.getTimeAgo(order.createdAt, context),
+                              fontSize: 12.sp,
+                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha:0.5),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ],
                   ),
                   Container(
                     padding: EdgeInsets.symmetric(
@@ -99,7 +121,7 @@ class MyOrderCard extends StatelessWidget {
                         ),
                         SizedBox(width: 4.w),
                         CustomText(
-                          text: "${AppLocalizations.of(context)!.items} ${order.items!.length.toString()}",
+                          text: "${order.items!.length.toString()} ${AppLocalizations.of(context)!.items}",
                           fontSize: 14.sp,
                           color: Theme.of(context).colorScheme.onSurface.withValues(alpha:0.6),
                         ),

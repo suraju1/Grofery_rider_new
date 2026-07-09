@@ -13,9 +13,10 @@ class AcceptOrderRepo {
         body: body,
       );
       return response;
+    } on ApiException {
+      rethrow;
     } catch (error) {
-
-      throw Exception('Error occurred');
+      throw Exception(error.toString());
     }
   }
 }

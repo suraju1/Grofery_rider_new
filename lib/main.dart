@@ -7,6 +7,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:grofery_rider/router/app_routes.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:grofery_rider/screens/auth/bloc/auth_bloc/auth_bloc.dart';
 import 'package:grofery_rider/screens/auth/bloc/delivery_zone_bloc/delivery_zone_bloc.dart';
 import 'package:grofery_rider/screens/dashboard/bloc/ratings_bloc.dart';
@@ -97,12 +98,27 @@ void main() async {
 Future<void> initializeService() async {
   final service = FlutterBackgroundService();
 
+  const AndroidNotificationChannel channel = AndroidNotificationChannel(
+    'location_tracker_channel_v2', // id
+    'Location Tracking', // title
+    description: 'This channel is used for important notifications.', // description
+    importance: Importance.low, // importance must be at least low for foreground service
+  );
+
+  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+      FlutterLocalNotificationsPlugin();
+
+  await flutterLocalNotificationsPlugin
+      .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>()
+      ?.createNotificationChannel(channel);
+
   await service.configure(
     androidConfiguration: AndroidConfiguration(
       onStart: tracker.onStart,
       autoStart: false,
       isForegroundMode: true,
-      notificationChannelId: 'location_tracker_channel',
+      notificationChannelId: 'location_tracker_channel_v2',
       initialNotificationTitle: 'Location Tracking',
       initialNotificationContent: 'Tracking your location for deliveries',
       foregroundServiceNotificationId: 888,

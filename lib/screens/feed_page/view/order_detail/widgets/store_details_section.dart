@@ -75,13 +75,9 @@ class StoreDetailsSection extends StatelessWidget {
                     child: Center(
                       child: CustomText(
                         text:
-                            order
-                                .deliveryRoute
-                                ?.routeDetails
-                                ?.first
-                                .storeName?[0]
-                                .toUpperCase() ??
-                            "",
+                            (order.deliveryRoute?.routeDetails?.firstOrNull?.storeName?.isNotEmpty == true)
+                                ? order.deliveryRoute!.routeDetails!.first.storeName![0].toUpperCase()
+                                : "S",
                         color: Theme.of(context).colorScheme.onPrimary,
                         fontWeight: FontWeight.bold,
                         fontSize: 16.sp,
@@ -98,23 +94,23 @@ class StoreDetailsSection extends StatelessWidget {
                               order
                                   .deliveryRoute
                                   ?.routeDetails
-                                  ?.first
-                                  .storeName ??
+                                  ?.firstOrNull
+                                  ?.storeName ??
                               AppLocalizations.of(context)!.store,
                           fontSize: 16.sp,
                           fontWeight: FontWeight.w600,
                           color: Theme.of(context).colorScheme.onSurface,
                         ),
                         SizedBox(height: 4.h),
-                        if (order.deliveryRoute?.routeDetails?.first.address !=
+                        if (order.deliveryRoute?.routeDetails?.firstOrNull?.address !=
                             null)
                           CustomText(
                             text:
                                 order
                                     .deliveryRoute!
                                     .routeDetails!
-                                    .first
-                                    .address ??
+                                    .firstOrNull
+                                    ?.address ??
                                 "",
                             fontSize: 14.sp,
                             color: Colors.grey[600],
@@ -123,12 +119,12 @@ class StoreDetailsSection extends StatelessWidget {
                         if (order
                                 .deliveryRoute
                                 ?.routeDetails
-                                ?.first
-                                .distanceFromCustomer !=
+                                ?.firstOrNull
+                                ?.distanceFromCustomer !=
                             null)
                           CustomText(
                             text:
-                                '${order.deliveryRoute!.routeDetails!.first.distanceFromCustomer!.toStringAsFixed(1)} km from customer',
+                                '${order.deliveryRoute!.routeDetails!.firstOrNull!.distanceFromCustomer!.toStringAsFixed(1)} km from customer',
                             fontSize: 12.sp,
                             color: Colors.blue[600],
                             fontWeight: FontWeight.w500,

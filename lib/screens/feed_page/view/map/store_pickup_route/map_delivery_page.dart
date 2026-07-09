@@ -8,6 +8,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import '../../../../../l10n/app_localizations.dart';
 import '../../../../../utils/widgets/custom_appbar_without_navbar.dart';
+import '../../../../../utils/widgets/toast_message.dart';
 import '../../../model/available_orders.dart';
 import 'widgets/index.dart';
 
@@ -94,6 +95,14 @@ class _MapDeliveryPageState extends State<MapDeliveryPage> {
   }
 
   void _setFallbackLocation() {
+    if (mounted) {
+      ToastManager.show(
+        context: context,
+        message: 'Please enable GPS and Location Permissions to track your route',
+        type: ToastType.error,
+      );
+    }
+
     setState(() {
       // Use shipping address coordinates as fallback location
       double fallbackLat = 23.2488453; // Default Bhuj coordinates
@@ -165,6 +174,10 @@ class _MapDeliveryPageState extends State<MapDeliveryPage> {
 
       if (allPoints.length >= 2) {
         final bounds = LatLngBounds.fromPoints(allPoints);
+        if (bounds.southWest == bounds.northEast) {
+          bounds.extend(LatLng(bounds.northEast.latitude + 0.001, bounds.northEast.longitude + 0.001));
+          bounds.extend(LatLng(bounds.southWest.latitude - 0.001, bounds.southWest.longitude - 0.001));
+        }
 
         _mapController.fitCamera(
           CameraFit.bounds(bounds: bounds, padding: EdgeInsets.all(50)),

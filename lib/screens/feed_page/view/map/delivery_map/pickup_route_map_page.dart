@@ -8,6 +8,9 @@ import 'package:grofery_rider/utils/widgets/custom_scaffold.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:location/location.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:geocoding/geocoding.dart' as geocoding;
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import 'package:grofery_rider/l10n/app_localizations.dart';
 import '../../../../../config/colors.dart';
 import '../../../../../config/constant.dart';
@@ -41,6 +44,8 @@ class _PickupRouteMapPageState extends State<PickupRouteMapPage> {
   late MapController _mapController;
   LocationData? _currentLocation;
   bool _isLoadingLocation = true;
+  LatLng? _customerLatLng;
+  bool _isGeocodingCustomer = true;
 
   // Manual confirmation variables
   bool _hasReachedDestination = false;
@@ -82,7 +87,128 @@ class _PickupRouteMapPageState extends State<PickupRouteMapPage> {
       }
     });
 
-    _getCurrentLocation();
+    _resolveCustomerLocation().then((_) {
+      _getCurrentLocation();
+    });
+  }
+
+  Future<void> _resolveCustomerLocation() async {
+    // 1. Try routeDetails.last
+    if (widget.order.deliveryRoute?.routeDetails != null &&
+        widget.order.deliveryRoute!.routeDetails!.isNotEmpty) {
+      final lastIndex = widget.order.deliveryRoute!.routeDetails!.length - 1;
+      final customerAddress =
+          widget.order.deliveryRoute!.routeDetails![lastIndex];
+
+      if (customerAddress.latitude != null &&
+          customerAddress.longitude != null) {
+        if (mounted) {
+          setState(() {
+            _customerLatLng = LatLng(
+                customerAddress.latitude!, customerAddress.longitude!);
+            _isGeocodingCustomer = false;
+          });
+        }
+        return;
+      }
+    }
+
+    // 2. Try shippingLatitude
+    if (widget.order.shippingLatitude != null &&
+        widget.order.shippingLongitude != null) {
+      double? lat = double.tryParse(widget.order.shippingLatitude!);
+      double? lng = double.tryParse(widget.order.shippingLongitude!);
+      if (lat != null && lng != null) {
+        if (mounted) {
+          setState(() {
+            _customerLatLng = LatLng(lat, lng);
+            _isGeocodingCustomer = false;
+          });
+        }
+        return;
+      }
+    }
+
+    // 3. Fallback to geocoding shippingAddress1
+    if (widget.order.shippingAddress1 != null) {
+      String address = widget.order.shippingAddress1!;
+      if (widget.order.shippingAddress2 != null) {
+        address += ', ${widget.order.shippingAddress2}';
+      }
+      if (widget.order.shippingCity != null) {
+        address += ', ${widget.order.shippingCity}';
+      }
+      
+      try {
+        print('Geocoding address: $address');
+        List<geocoding.Location> locations = await geocoding.locationFromAddress(address);
+        print('Geocoding results: $locations');
+        if (locations.isNotEmpty) {
+          if (mounted) {
+            setState(() {
+              _customerLatLng = LatLng(locations.first.latitude, locations.first.longitude);
+              _isGeocodingCustomer = false;
+            });
+          }
+          return;
+        }
+      } catch (e) {
+        print('Geocoding error: $e');
+        
+        // Fallback to OSM Nominatim API if native geocoding fails (e.g. on emulators)
+        try {
+           print('Trying OSM Nominatim fallback for: $address');
+           final url = Uri.parse('https://nominatim.openstreetmap.org/search?q=${Uri.encodeComponent(address)}&format=json&limit=1');
+           final response = await http.get(url, headers: {'User-Agent': 'GroferyRiderApp'});
+           if (response.statusCode == 200) {
+             final List data = jsonDecode(response.body);
+             if (data.isNotEmpty) {
+               final double lat = double.parse(data[0]['lat'].toString());
+               final double lng = double.parse(data[0]['lon'].toString());
+               print('OSM Nominatim success: lat=$lat, lng=$lng');
+               if (mounted) {
+                 setState(() {
+                   _customerLatLng = LatLng(lat, lng);
+                   _isGeocodingCustomer = false;
+                 });
+               }
+               return;
+             } else {
+               print('OSM Nominatim returned empty results, trying just city');
+               if (widget.order.shippingCity != null) {
+                 final cityUrl = Uri.parse('https://nominatim.openstreetmap.org/search?q=${Uri.encodeComponent(widget.order.shippingCity!)}&format=json&limit=1');
+                 final cityResponse = await http.get(cityUrl, headers: {'User-Agent': 'GroferyRiderApp'});
+                 if (cityResponse.statusCode == 200) {
+                   final List cityData = jsonDecode(cityResponse.body);
+                   if (cityData.isNotEmpty) {
+                     final double lat = double.parse(cityData[0]['lat'].toString());
+                     final double lng = double.parse(cityData[0]['lon'].toString());
+                     print('OSM Nominatim city fallback success: lat=$lat, lng=$lng');
+                     if (mounted) {
+                       setState(() {
+                         _customerLatLng = LatLng(lat, lng);
+                         _isGeocodingCustomer = false;
+                       });
+                     }
+                     return;
+                   }
+                 }
+               }
+             }
+           } else {
+             print('OSM Nominatim failed with status code: ${response.statusCode}');
+           }
+        } catch(e2) {
+           print('OSM Nominatim error: $e2');
+        }
+      }
+    }
+
+    if (mounted) {
+      setState(() {
+        _isGeocodingCustomer = false;
+      });
+    }
   }
 
   Future<void> _getCurrentLocation() async {
@@ -124,7 +250,7 @@ class _PickupRouteMapPageState extends State<PickupRouteMapPage> {
       }
 
       final locationData = await location.getLocation().timeout(
-        const Duration(seconds: 5),
+        const Duration(seconds: 15),
         onTimeout: () => throw TimeoutException('Location request timed out'),
       );
 
@@ -161,22 +287,32 @@ class _PickupRouteMapPageState extends State<PickupRouteMapPage> {
   }
 
   void _setFallbackLocation() {
+    if (mounted) {
+      ToastManager.show(
+        context: context,
+        message: 'Please enable GPS and Location Permissions to track your route',
+        type: ToastType.error,
+      );
+    }
+
     setState(() {
-      // Use shipping address coordinates as fallback location
+      // Use shipping address coordinates + offset as fallback location so it doesn't overlap exactly
       double fallbackLat = 23.2488453; // Default Bhuj coordinates
       double fallbackLng = 69.6696795;
 
-      if (widget.order.deliveryRoute?.routeDetails != null &&
-          widget.order.deliveryRoute!.routeDetails!.isNotEmpty) {
-        final lastIndex = widget.order.deliveryRoute!.routeDetails!.length - 1;
-        final shippingAddress =
-            widget.order.deliveryRoute!.routeDetails![lastIndex];
-
-        if (shippingAddress.latitude != null &&
-            shippingAddress.longitude != null) {
-          fallbackLat = shippingAddress.latitude!;
-          fallbackLng = shippingAddress.longitude!;
-        } else {}
+      // Try to use the store's location as the fallback so distance matches exactly with what's expected
+      if (widget.order.deliveryRoute?.routeDetails?.isNotEmpty == true) {
+        final firstStore = widget.order.deliveryRoute!.routeDetails!.first;
+        if (firstStore.latitude != null && firstStore.longitude != null) {
+          fallbackLat = firstStore.latitude!;
+          fallbackLng = firstStore.longitude!;
+        } else if (_customerLatLng != null) {
+          fallbackLat = _customerLatLng!.latitude - 0.02;
+          fallbackLng = _customerLatLng!.longitude - 0.02;
+        }
+      } else if (_customerLatLng != null) {
+        fallbackLat = _customerLatLng!.latitude - 0.02; // Offset by ~2km south
+        fallbackLng = _customerLatLng!.longitude - 0.02; // Offset by ~2km west
       }
 
       _currentLocation = LocationData.fromMap({
@@ -192,46 +328,19 @@ class _PickupRouteMapPageState extends State<PickupRouteMapPage> {
   void _fitMapToAllPoints() {
     if (_currentLocation == null) return;
 
+    final dest = _destinationLocation;
     final List<LatLng> allPoints = [
       LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
+      dest,
     ];
 
-    // Add seller/shipping address location (last item in route_details)
-    if (widget.order.deliveryRoute?.routeDetails != null) {
-      final routeDetails = widget.order.deliveryRoute!.routeDetails!;
-
-      // Use the last item as destination (seller/shipping address)
-      if (routeDetails.isNotEmpty) {
-        final lastIndex = routeDetails.length - 1;
-        final sellerAddress = routeDetails[lastIndex];
-
-        // Check if seller coordinates are different from current location
-        final currentLat = _currentLocation!.latitude!;
-        final currentLng = _currentLocation!.longitude!;
-        final sellerLat = sellerAddress.latitude;
-        final sellerLng = sellerAddress.longitude;
-
-        if (sellerLat != null && sellerLng != null) {
-          // Check if coordinates are actually different (with larger tolerance)
-          if ((sellerLat - currentLat).abs() > 0.001 ||
-              (sellerLng - currentLng).abs() > 0.001) {
-            final sellerPoint = LatLng(sellerLat, sellerLng);
-            allPoints.add(sellerPoint);
-          } else {
-            // Use Bhuj city center as fallback (settings realistic)
-            final fallbackPoint = LatLng(23.2530, 69.6693); // Bhuj city center
-            allPoints.add(fallbackPoint);
-          }
-        } else {
-          // Use Bhuj city center as fallback
-          final fallbackPoint = LatLng(23.2530, 69.6693); // Bhuj city center
-          allPoints.add(fallbackPoint);
-        }
-      }
-    }
-
     if (allPoints.length >= 2) {
+      // Add a tiny offset to avoid 0-area bounds crashing FlutterMap
       final bounds = LatLngBounds.fromPoints(allPoints);
+      if (bounds.southWest == bounds.northEast) {
+        bounds.extend(LatLng(bounds.northEast.latitude + 0.001, bounds.northEast.longitude + 0.001));
+        bounds.extend(LatLng(bounds.southWest.latitude - 0.001, bounds.southWest.longitude - 0.001));
+      }
 
       _mapController.fitCamera(
         CameraFit.bounds(bounds: bounds, padding: EdgeInsets.all(50)),
@@ -242,43 +351,11 @@ class _PickupRouteMapPageState extends State<PickupRouteMapPage> {
   List<LatLng> _generatePickupRoute() {
     if (_currentLocation == null) return [];
 
+    final dest = _destinationLocation;
     final List<LatLng> routePoints = [
       LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
+      dest,
     ];
-
-    // For pickup route, destination should be the seller/shipping address (last item in route_details)
-    if (widget.order.deliveryRoute?.routeDetails != null) {
-      final routeDetails = widget.order.deliveryRoute!.routeDetails!;
-
-      // Use the last item as destination (seller/shipping address)
-      if (routeDetails.isNotEmpty) {
-        final lastIndex = routeDetails.length - 1;
-        final sellerAddress = routeDetails[lastIndex];
-
-        // Check if seller coordinates are different from current location
-        final currentLat = _currentLocation!.latitude!;
-        final currentLng = _currentLocation!.longitude!;
-        final sellerLat = sellerAddress.latitude;
-        final sellerLng = sellerAddress.longitude;
-
-        if (sellerLat != null && sellerLng != null) {
-          // Check if coordinates are actually different (with larger tolerance)
-          if ((sellerLat - currentLat).abs() > 0.001 ||
-              (sellerLng - currentLng).abs() > 0.001) {
-            final sellerPoint = LatLng(sellerLat, sellerLng);
-            routePoints.add(sellerPoint);
-          } else {
-            // Use Bhuj city center as fallback (settings realistic)
-            final fallbackPoint = LatLng(23.2530, 69.6693); // Bhuj city center
-            routePoints.add(fallbackPoint);
-          }
-        } else {
-          // Use Bhuj city center as fallback
-          final fallbackPoint = LatLng(23.2530, 69.6693); // Bhuj city center
-          routePoints.add(fallbackPoint);
-        }
-      }
-    }
 
     final validPoints =
         routePoints
@@ -356,45 +433,24 @@ class _PickupRouteMapPageState extends State<PickupRouteMapPage> {
       return 0.0;
     }
 
-    double totalDistanceToStores = 0.0;
+    final dest = _destinationLocation;
+    final currentPoint = _getCurrentLocationLatLng();
 
-    if (widget.order.deliveryRoute?.routeDetails != null) {
-      final routeDetails = widget.order.deliveryRoute!.routeDetails!;
+    if (!currentPoint.latitude.isNaN && !currentPoint.longitude.isNaN) {
+      const double earthRadius = 6371; // kilometers
+      final lat1 = currentPoint.latitude * pi / 180;
+      final lat2 = dest.latitude * pi / 180;
+      final deltaLat = (dest.latitude - currentPoint.latitude) * pi / 180;
+      final deltaLng = (dest.longitude - currentPoint.longitude) * pi / 180;
 
-      // Exclude the last index (shipping address) - only include stores
-      for (int i = 0; i < routeDetails.length - 1; i++) {
-        final store = routeDetails[i];
-
-        if (store.latitude != null && store.longitude != null) {
-          final storePoint = LatLng(store.latitude!, store.longitude!);
-          final currentPoint = _getCurrentLocationLatLng();
-
-          if (!currentPoint.latitude.isNaN &&
-              !currentPoint.longitude.isNaN &&
-              !storePoint.latitude.isNaN &&
-              !storePoint.longitude.isNaN) {
-            const double earthRadius = 6371; // kilometers
-            final lat1 = currentPoint.latitude * pi / 180;
-            final lat2 = storePoint.latitude * pi / 180;
-            final deltaLat =
-                (storePoint.latitude - currentPoint.latitude) * pi / 180;
-            final deltaLng =
-                (storePoint.longitude - currentPoint.longitude) * pi / 180;
-
-            final a =
-                sin(deltaLat / 2) * sin(deltaLat / 2) +
-                cos(lat1) * cos(lat2) * sin(deltaLng / 2) * sin(deltaLng / 2);
-            if (a > 1.0) continue; // Prevent NaN from acos
-            final c = 2 * atan2(sqrt(a), sqrt(1 - a));
-
-            final distanceToStore = earthRadius * c;
-            totalDistanceToStores += distanceToStore;
-          }
-        }
+      final a = sin(deltaLat / 2) * sin(deltaLat / 2) +
+          cos(lat1) * cos(lat2) * sin(deltaLng / 2) * sin(deltaLng / 2);
+      if (a <= 1.0) {
+        final c = 2 * atan2(sqrt(a), sqrt(1 - a));
+        return earthRadius * c;
       }
     }
-
-    return totalDistanceToStores;
+    return 0.0;
   }
 
   LatLng _getCurrentLocationLatLng() {
@@ -402,21 +458,20 @@ class _PickupRouteMapPageState extends State<PickupRouteMapPage> {
       return LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!);
     }
 
-    // Use shipping address coordinates as fallback
-    if (widget.order.deliveryRoute?.routeDetails != null &&
-        widget.order.deliveryRoute!.routeDetails!.isNotEmpty) {
-      final lastIndex = widget.order.deliveryRoute!.routeDetails!.length - 1;
-      final shippingAddress =
-          widget.order.deliveryRoute!.routeDetails![lastIndex];
-
-      if (shippingAddress.latitude != null &&
-          shippingAddress.longitude != null) {
-        return LatLng(shippingAddress.latitude!, shippingAddress.longitude!);
-      }
+    if (_customerLatLng != null) {
+      return _customerLatLng!;
     }
 
     // Final fallback to default Bhuj coordinates
 
+    return const LatLng(23.2488453, 69.6696795);
+  }
+
+  LatLng get _destinationLocation {
+    if (_customerLatLng != null) {
+      return _customerLatLng!;
+    }
+    // Final fallback to default Bhuj coordinates
     return const LatLng(23.2488453, 69.6696795);
   }
 
@@ -541,149 +596,29 @@ class _PickupRouteMapPageState extends State<PickupRouteMapPage> {
       }
     }
 
-    // Add seller/shipping address marker (last item in route_details)
-    if (widget.order.deliveryRoute?.routeDetails != null) {
-      final routeDetails = widget.order.deliveryRoute!.routeDetails!;
-
-      // Use the last item as destination (seller/shipping address)
-      if (routeDetails.isNotEmpty) {
-        final lastIndex = routeDetails.length - 1;
-        final sellerAddress = routeDetails[lastIndex];
-
-        // Check if seller coordinates are different from current location
-        final currentLat = _currentLocation!.latitude!;
-        final currentLng = _currentLocation!.longitude!;
-        final sellerLat = sellerAddress.latitude;
-        final sellerLng = sellerAddress.longitude;
-
-        if (sellerLat != null && sellerLng != null) {
-          // Check if coordinates are actually different (with larger tolerance)
-          if ((sellerLat - currentLat).abs() > 0.001 ||
-              (sellerLng - currentLng).abs() > 0.001) {
-            final sellerPoint = LatLng(sellerLat, sellerLng);
-
-            markers.add(
-              Marker(
-                point: sellerPoint,
-                width: 45.w,
-                height: 45.h,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.amber,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 4.w),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.4),
-                        blurRadius: 10.r,
-                        offset: Offset(0, 3.h),
-                      ),
-                    ],
-                  ),
-                  child: Icon(
-                    Icons.home,
-                    color: Colors.white,
-                    size: 20.sp,
-                  ), // Changed to home icon for shipping address
-                ),
+    // Add seller/shipping address marker
+    markers.add(
+      Marker(
+        point: _destinationLocation,
+        width: 45.w,
+        height: 45.h,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.red,
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.white, width: 4.w),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.4),
+                blurRadius: 10.r,
+                offset: Offset(0, 3.h),
               ),
-            );
-          } else {
-            // Use Bhuj city center as fallback (settings realistic)
-            final fallbackPoint = LatLng(23.2530, 69.6693); // Bhuj city center
-
-            markers.add(
-              Marker(
-                point: fallbackPoint,
-                width: 45.w,
-                height: 45.h,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.amber,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 4.w),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.4),
-                        blurRadius: 10.r,
-                        offset: Offset(0, 3.h),
-                      ),
-                    ],
-                  ),
-                  child: Icon(
-                    Icons.home,
-                    color: Colors.white,
-                    size: 20.sp,
-                  ), // Changed to home icon for shipping address
-                ),
-              ),
-            );
-          }
-        } else {
-          // Use Bhuj city center as fallback
-          final fallbackPoint = LatLng(23.2530, 69.6693); // Bhuj city center
-
-          markers.add(
-            Marker(
-              point: fallbackPoint,
-              width: 45.w,
-              height: 45.h,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.red,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 4.w),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.4),
-                      blurRadius: 10.r,
-                      offset: Offset(0, 3.h),
-                    ),
-                  ],
-                ),
-                child: Icon(
-                  Icons.home,
-                  color: Colors.white,
-                  size: 20.sp,
-                ), // Changed to home icon for shipping address
-              ),
-            ),
-          );
-        }
-      }
-    }
-
-    if (widget.order.shippingLatitude != null &&
-        widget.order.shippingLongitude != null) {
-      final lat = double.tryParse(widget.order.shippingLatitude!) ?? double.nan;
-      final lng =
-          double.tryParse(widget.order.shippingLongitude!) ?? double.nan;
-      if (lat.isNaN || lng.isNaN) {
-      } else {
-        markers.add(
-          Marker(
-            point: LatLng(lat, lng),
-            width: 45.w,
-            height: 45.h,
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.red,
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 4.w),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.4),
-                    blurRadius: 10.r,
-                    offset: Offset(0, 3.h),
-                  ),
-                ],
-              ),
-              child: Icon(Icons.location_on, color: Colors.white, size: 20.sp),
-            ),
+            ],
           ),
-        );
-      }
-    }
+          child: Icon(Icons.location_on, color: Colors.white, size: 22.sp),
+        ),
+      ),
+    );
 
     final routePoints = _generatePickupRoute();
     if (routePoints.length > 2) {
@@ -769,7 +704,7 @@ class _PickupRouteMapPageState extends State<PickupRouteMapPage> {
                   ],
                 ],
               ),
-              if (_isLoadingLocation)
+              if (_isLoadingLocation || _isGeocodingCustomer)
                 Container(
                   color: Colors.black.withValues(alpha: 0.3),
                   child: Center(

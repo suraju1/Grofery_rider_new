@@ -18,6 +18,7 @@ import '../../../../router/app_routes.dart';
 import '../../../../utils/widgets/toast_message.dart';
 import '../../../../utils/currency_formatter.dart';
 import 'package:grofery_rider/l10n/app_localizations.dart';
+import 'package:grofery_rider/utils/time_utils.dart';
 
 class AvailableOrderCard extends StatelessWidget {
   final Orders order;
@@ -144,6 +145,16 @@ class _AvailableOrderCardContent extends StatelessWidget {
                             fontWeight: FontWeight.w600,
                             color: AppColors.primaryColor,
                           ),
+                          if (order.createdAt != null && order.createdAt!.isNotEmpty) ...[
+                            SizedBox(width: 8.w),
+                            Icon(Icons.access_time, size: 10.sp, color: AppColors.primaryColor.withValues(alpha:0.7)),
+                            SizedBox(width: 2.w),
+                            CustomText(
+                              text: TimeUtils.getTimeAgo(order.createdAt, context),
+                              fontSize: 10.sp,
+                              color: AppColors.primaryColor.withValues(alpha:0.7),
+                            ),
+                          ],
                         ],
                       ),
                       if (order.deliveryRoute?.routeDetails != null &&
@@ -226,8 +237,8 @@ class _AvailableOrderCardContent extends StatelessWidget {
                               order
                                   .deliveryRoute
                                   ?.routeDetails
-                                  ?.first
-                                  .storeName ??
+                                  ?.firstOrNull
+                                  ?.storeName ??
                                   AppLocalizations.of(context)!.store,
                               fontSize: 13.sp, // Reduced from 14.sp to 13.sp
                               fontWeight: FontWeight.w600,
@@ -309,6 +320,11 @@ class _AvailableOrderCardContent extends StatelessWidget {
               child: BlocConsumer<AcceptOrderBloc, AcceptOrderState>(
                 listener: (context, state) {
                   if (state is AcceptOrderSuccess) {
+                    ToastManager.show(
+                      context: context,
+                      message: state.message,
+                      type: ToastType.success,
+                    );
                     // Navigate to map delivery page on success
                     _navigateToMapDeliveryPage(context, order);
                   } else if (state is AcceptOrderCompleted) {
@@ -317,8 +333,11 @@ class _AvailableOrderCardContent extends StatelessWidget {
                       AllAvailableOrdersList(forceRefresh: true),
                     );
                   } else if (state is AcceptOrderError) {
-                    // Show error message (toast is already handled by the bloc)
-
+                    ToastManager.show(
+                      context: context,
+                      message: state.errorMessage,
+                      type: ToastType.error,
+                    );
                   }
                 },
                 builder: (context, state) {
@@ -386,7 +405,7 @@ class _AvailableOrderCardContent extends StatelessWidget {
 
   String _getStoreInitials(Orders order, BuildContext context) {
     final storeName =
-        order.deliveryRoute?.routeDetails?.first.storeName ??
+        order.deliveryRoute?.routeDetails?.firstOrNull?.storeName ??
             AppLocalizations.of(context)!.store;
     if (storeName.isEmpty || storeName == AppLocalizations.of(context)!.store) {
       return 'S';
@@ -406,63 +425,34 @@ class _AvailableOrderCardContent extends StatelessWidget {
       BuildContext context,
       Orders order,
       ) async {
-
-
-    // Check for store pickup coordinates first, then fallback to delivery coordinates
-    bool hasValidCoordinates = false;
-    String? destinationLat;
-    String? destinationLng;
+    String destinationLat = '0.0';
+    String destinationLng = '0.0';
 
     if (order.deliveryRoute?.routeDetails != null &&
         order.deliveryRoute!.routeDetails!.isNotEmpty) {
       final storeLocation = order.deliveryRoute!.routeDetails!.first;
-      hasValidCoordinates =
-          storeLocation.latitude != null && storeLocation.longitude != null;
-      if (hasValidCoordinates) {
+      if (storeLocation.latitude != null && storeLocation.longitude != null) {
         destinationLat = storeLocation.latitude.toString();
         destinationLng = storeLocation.longitude.toString();
       }
-
+    } else if (order.shippingLatitude != null && order.shippingLongitude != null) {
+      destinationLat = order.shippingLatitude.toString();
+      destinationLng = order.shippingLongitude.toString();
     }
 
-    // If no store coordinates, try delivery coordinates
-    if (!hasValidCoordinates) {
-      hasValidCoordinates =
-          order.shippingLatitude != null && order.shippingLongitude != null;
-      if (hasValidCoordinates) {
-        destinationLat = order.shippingLatitude.toString();
-        destinationLng = order.shippingLongitude.toString();
-      }
-
-    }
-
-    if (hasValidCoordinates &&
-        destinationLat != null &&
-        destinationLng != null) {
-      try {
-        // Navigate to map delivery page
-        context.push(
-          AppRoutes.mapDelivery,
-          extra: {
-            'order': order,
-            'currentLat': destinationLat,
-            'currentLng': destinationLng,
-          },
-        );
-      } catch (e) {
-
-        ToastManager.show(
-          context: context,
-          message: AppLocalizations.of(context)!.navigationError(e.toString()),
-          type: ToastType.error,
-        );
-      }
-    } else {
-
+    try {
+      context.push(
+        AppRoutes.mapDelivery,
+        extra: {
+          'order': order,
+          'currentLat': destinationLat,
+          'currentLng': destinationLng,
+        },
+      );
+    } catch (e) {
       ToastManager.show(
         context: context,
-        message:
-        AppLocalizations.of(context)!.storePickupCoordinatesNotAvailable,
+        message: AppLocalizations.of(context)!.navigationError(e.toString()),
         type: ToastType.error,
       );
     }
